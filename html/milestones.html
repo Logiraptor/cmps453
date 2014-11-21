@@ -1,0 +1,33 @@
+<html>
+	<body>
+		<table width='75%'>
+			<tr>
+				<td><b>City Name</b></td>
+				<td><b>Lap Goal</b></td>
+			</tr>
+			<!-- Time for some jinja stuff -->
+			{% if milestones %}
+				{% for m in milestones %}
+					<tr>
+						<td>{{ m.city_name }}</td>
+						<td>{{ m.goalLaps }}</td>
+						<td>
+							<!-- Modify -->
+							<form action=''>
+								<input type='hidden' name='milestone' value='{{m}}'/>
+								<input type='submit' value='Modify'/>
+							</form>
+							<form>
+								<input type='hidden' name='milestone' value='{{m}}'/>
+								<input type='submit' value='delete'/>
+							</form>
+						</td>
+					</tr>
+
+				{% endfor %}
+			{% endif %}
+		</table>
+		<br>
+		<a href="/addMilestone"><button>Add New Milestone</button></a>
+	</body>
+</html>
