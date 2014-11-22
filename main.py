@@ -7,6 +7,9 @@ from webapp2_extras.appengine.users import login_required, admin_required
 from google.appengine.api import users
 import webapp2
 from import_export import ImportHandler, ExportHandler
+from google.appengine.api import mail
+from datetime import date
+import logging
 
 import json
 from string import Template
@@ -16,9 +19,7 @@ from tmpl import BaseHandler
 cgitb.enable()
 
 BACK_BUTTON = """
-		<form action="/Main" method="post">
-			<div><input type="submit" value="Back to Main Page"></div>
-		</form>
+		<a href="/"><button>Back To Main Page</button></a>
 	</body>
 </html>
 """
@@ -32,14 +33,15 @@ class Milestone(ndb.Model):
 class Teacher(ndb.Model):
 	name = ndb.StringProperty()
 	currentMilestone = ndb.KeyProperty(Milestone)
+	grade = ndb.StringProperty()
 	totalClassMiles = ndb.ComputedProperty(lambda self: sum([s.total_miles for s in Student.query(Student.teacher == self.key)]))
 
 # Data structure: Student Data
 class Student(ndb.Model):
-	id = ndb.IntegerProperty()
-	name = ndb.StringProperty()
+	studentID = ndb.IntegerProperty()
+	name = ndb.StringProperty(indexed=True)
 	teacher = ndb.KeyProperty(Teacher)
-	grade = ndb.StringProperty
+	grade = ndb.StringProperty()
 	laps1 = ndb.FloatProperty()
 	laps2 = ndb.FloatProperty()
 	total_miles = ndb.ComputedProperty(lambda self: self.laps1*0.1+self.laps2*0.25)
@@ -49,6 +51,8 @@ class MainPage(BaseHandler):
 	def get(self):
 		self.render('html/index.html', {})
 
+# Handler that sends a report of each teacher and how many miles remaining before reaching their next milestone goal
+# This handler should only be called by a cron task
 class EmailHandler(webapp2.RequestHandler):
 	@admin_required
 	def get(self):
@@ -62,12 +66,13 @@ class EmailHandler(webapp2.RequestHandler):
 				</tr>
 				""")
 
+			subject = 'Weekly Milestone Progress Report: ' + str(date.today())
 			# create an EmailMessage object
-			eMessage = mail.EmailMessage(sender = 'dmeche520@gmail.com', subject = 'Weekly Milestone Progress Report: <date>')
+			eMessage = mail.EmailMessage(sender = 'dmeche520@gmail.com', subject = subject)
 			user = users.get_current_user()
 			eMessage.to = user.email()
 			#eMessage.to = <teacher_email>
-			subject = 'Weekly Milestone Progress Report: <date>'
+			
 			
 			body = """
 			<html>
@@ -120,135 +125,169 @@ class EmailHandler(webapp2.RequestHandler):
 					self.response.out.write('The email could not be sent. Please try again later.')
 					self.response.write(ERROR_FORM % message)
 
-# Handler: Milestone configuration
-class ConfigureMilestones(webapp2.RequestHandler):
+# Handler that lists the milestones currently in the datastore
+class Milestones(BaseHandler):
 	@admin_required
 	def get(self):
-		self.response.write(CONFIG_HEADER_HTML)
+		# get all milestones
+		milestones = Milestone.query()
 
-		# get and write value
-		boxValue = self.request.get('box')
+		# render milestones.html with all milestones
+		self.render('html/milestones.html', {
+			'milestones' : milestones
+			})
 		
-		# test the value of boxValue
-		if boxValue == "List":
-			# get a list of all milestones
-			allMilestones = Milestone.query()
-
-			# define a template for jinja
-			template_values = {
-			'milestones' : allMilestones
-			}
-
-			jinjaTemplate = jinja2.Template(CONFIG_LIST_FOOTER)
-			self.response.write(jinjaTemplate.render(template_values))
-
-		elif boxValue == 'Add':
-			self.redirect('/addMilestone')
-		elif boxValue == 'Delete':
-			# get all of the milestones
-			allMilestones = Milestone.query()
-
-			# define a template for jinja
-			template_values = {
-			'milestones' : allMilestones
-			}
-
-			jinjaTemplate = jinja2.Template(DELETE_HTML)
-			self.response.write(jinjaTemplate.render(template_values))
-		elif boxValue == 'Modify':
-			# get all of the milestones
-			allMilestones = Milestone.query()
-
-			# define a template for jinja
-			template_values = {
-			'milestones' : allMilestones
-			}
-
-			jinjaTemplate = jinja2.Template(MODIFY_HEADER_HTML)
-			self.response.write(jinjaTemplate.render(template_values))
-
 # Handler that adds a new milestone to the datastore
-class AddMilestone(webapp2.RequestHandler):
+class AddMilestone(BaseHandler):
+	@admin_required
 	def get(self):
-		self.response.write(ADD_HTML)
+		self.render('html/addMilestone.html', {})
 
+	def post(self):
 		try:
-			# get the city and goal
+			# get the data that they wish to add
 			city = self.request.get('city')
-			goal = self.request.get('goal')
+			laps = self.request.get('laps')
 
-			# create new Milestone and store in datastore
-			newMilestone = Milestone(id = city, city_name = city, goalMiles = int(goal))
-			newMilestone.put()
+			# if the user has input something for BOTH fields
+			if city and laps:
+				newMilestone = Milestone(id = city, city_name = city, goalMiles = int(laps))
+				newMilestone.put()
 
-			self.response.out.write('Milestone successfully added.')
-		except Exception as e:
+			self.redirect('/milestones')
+		except Exception, e:
 			logging.error(e)
+			self.response.out.write('Error adding milestone to datastore!')
+			self.response.out.write(e)
 
 # Handler that deletes a milestone from the datastore
 class DeleteMilestone(webapp2.RequestHandler):
 	def get(self):
 		try:
 			# get the city name of the milestone that they wish to delete
-			deleteChoice = self.request.get('list')
+			deleteChoice = self.request.get('cityName')
 
 			#toDelete = Milestone.query(Milestone.city_name == deleteChoice)
-			q = Milestone.query()
-			toDelete = q.filter(Milestone.city_name == deleteChoice).get()
-
-			# jinja template
-			deleteTemplate = {
-			'city' : toDelete.city_name,
-			}
-			djt = jinja2.Template(SUCCESSFUL_DELETE)
-
+			toDelete = Milestone.query(Milestone.city_name == deleteChoice).get()
+			
 			# delete from the datastore
 			toDelete.key.delete()
 
-			# display to user
-			self.response.write(djt.render(deleteTemplate))
+			self.redirect('/milestones')
 		except Exception as e:
-			self.response.write(UNSUCCESSFUL_DELETE)
-			self.response.out.write(e)
+			self.response.write('<html><body>Error deleting milestone!<br>')
+			self.response.write(e)
+			self.response.write(BACK_BUTTON)
 			logging.error(e)
-		
-class LapTrackerHandler(BaseHandler):
-	@login_required
-	def get(self):
-		self.render('html/tracker.html')
 
 # Handler that saves the changes made to a milestone
-class ModifyMilestone(webapp2.RequestHandler):
+class ModifyMilestone(BaseHandler):
+	@admin_required
 	def get(self):
-		chosenCity = self.request.get('choice')
-		
-		# get chosen milestone
-		q = Milestone.query()
-		chosenMilestone = q.filter(Milestone.city_name == chosenCity).get()
+		# get the chosen milestone
+		chosenCity = self.request.get('cityName')
 
-		# define second template
-		secondTemplate = {
-		'milestone' : chosenMilestone,
-		}
+		chosenMilestone = Milestone.query(Milestone.city_name == chosenCity).get()
 
-		# output change environment
-		jt = jinja2.Template(MOFIFY_FOOTER_HTML)
-		self.response.write(jt.render(secondTemplate))
+		self.render('html/modifyMilestone.html', {
+			'milestone' : chosenMilestone
+			})
+
+	def post(self):
+		chosenCity = self.request.get('cityName')
+		chosenMilestone = Milestone.query(Milestone.city_name == chosenCity).get()
 
 		try:
 			# get the new values
 			newCity = self.request.get('city')
 			newMiles = self.request.get('miles')
 
-			# update the milestone and put in datastore
+			# update the milestone and add changes to datastore
 			chosenMilestone.city_name = newCity
 			chosenMilestone.goalMiles = int(newMiles)
 			chosenMilestone.put()
 
-			# write success message
-			self.response.out.write('Milestone successfully modified.')
-		except Exception as e:
+			self.redirect('milestones')
+		except Exception, e:
 			logging.error(e)
+			self.response.write('<html><body>Error modifying milestone!<br>')
+			self.response.write(e)
+			self.response.write(BACK_BUTTON)
+		
+class LapTrackerHandler(BaseHandler):
+	@login_required
+	def get(self):
+		self.render('html/tracker.html', {})
+
+# Handler that will check if any teachers have met their current milestone mile target
+# This should only be called by a cron task
+class CheckMilestones(webapp2.RequestHandler):
+	@admin_required
+	def get(self):
+		# a list of teachers that have completed their milestone objective
+		teacherList = []
+
+		# get a list of all teachers
+		allTeachers = Teacher.query()
+
+		# iterate through all teachers
+		for teacher in allTeachers:
+			# get the current milestone for the teacher
+			currentMilestone = teacher.currentMilestone.get()
+			
+			# if the totalClassMiles of a teacher is >= its current milestone goal:
+			if teacher.totalClassMiles >= currentMilestone.goalMiles:
+				# add the teacher to the list
+				teacherList.append(teacher.name)
+
+				# find the next milestone and assign it to the teacher
+				nextMilestone = Milestone.query(Milestone.goalMiles > int(teacher.totalClassMiles)).get()
+
+				# check if there is a milestone
+				if nextMilestone:
+					teacher.currentMilestone = nextMilestone.key
+					teacher.put()
+
+		# if the teacherList is not empty
+		if teacherList:
+			# create an email to send to the teacher with the names of the teacher
+			rowTemplate = Template("""
+				<tr>
+					<td>$teacher</td>
+				</tr>
+			""")
+
+			subject = 'A Milestone Has Been Reached! ' + str(date.today())
+			mailMessage = mail.EmailMessage(sender='dmeche520@gmail.com', subject=subject)
+			# mailMessage.to = <teacher_email>
+			user = users.get_current_user()
+			mailMessage.to = user.email()
+
+			body = """
+			<html><body>
+				<center><h2>Milestone Reached!</h2></center>
+				The following teachers have reached their milestones:<br>
+				<table width='30%' border='1'>
+					<tr>
+						<th>Teacher Name</th>
+					</tr>
+			"""
+
+			# for every teacher name that has passed their milestone
+			for t in teacherList:
+				body = body + rowTemplate.substitute(teacher=t)
+
+			body = body + """
+				</table>
+			</body></html>
+			"""
+
+			# attach the body to the EmailMessage and send
+			mailMessage.body = body
+			mailMessage.html = body
+			mailMessage.send()
+
+		self.redirect('/')
 
 # assigns a web address to a handler
 application = webapp2.WSGIApplication([
@@ -257,8 +296,9 @@ application = webapp2.WSGIApplication([
 	('/export', ExportHandler),
 	('/track', LapTrackerHandler),
 	('/email', EmailHandler),
-	('/configMilestones', ConfigureMilestones),
+	('/milestones', Milestones),
 	('/addMilestone', AddMilestone),
 	('/deleteMilestone', DeleteMilestone),
 	('/modifyMilestone', ModifyMilestone),
+	('/checkMilestones', CheckMilestones),
 ], debug=True)
