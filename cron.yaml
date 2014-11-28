@@ -1,0 +1,6 @@
+# not sure what the target would be
+cron:
+- description: weekly milestone check
+  url: /crontask
+  schedule: every friday 15:00
+  timezone: US/Central
