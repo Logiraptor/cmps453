@@ -1,10 +1,14 @@
 import xlrd
 import collections
+import itertools
 from models import Student, Teacher, Class
 
 grade_sheets = ['pk', 'k', '1st', '2nd', '3rd', '4th', '5th', '6th']
 typo_error = 'no id found for %s, but it may be a misspelling of %s (%.0f%% confidence)'
 missing_error = 'no id found for %s'
+
+missing_class_error = '%s only appears in the IDs sheet.'
+available_class_error = '%s does not appear in the IDs sheet.'
 
 def parseWorkbook(wb):
 	'''
@@ -16,10 +20,59 @@ def parseWorkbook(wb):
 	sheets  = [wb.sheet_by_name(n) for n in grade_sheets]
 	classes = sum([parseSheet(s) for s in sheets], [])
 	IDs     = wb.sheet_by_name("IDs")
-	errors  = []
 
+	students = []
+	id_rows = (IDs.row(i) for i in xrange(1, IDs.nrows))
+	for row in id_rows:
+		students.append(Student(
+			id=int(row[0].value),
+			name=sanitize(str(row[1].value)),
+			teacher=sanitize(str(row[2].value)).split()[0],
+			grade=sanitize(str(row[3].value)),
+		))
+	print 'Found', len(students), 'Students'
+
+	missingStudents = []
+	for student in students:
+		clazz = None
+		for c in classes:
+			if nameEquals(c.teacher.name, student.teacher):
+				clazz = c
+				c.used = True
+				break
+		if not clazz:
+			missingStudents.append(student)
+			continue
+
+		tableEntry = None
+		for s in clazz.students:
+			if nameEquals(s.name, student.name):
+				tableEntry = s
+				break
+		if not tableEntry:
+			# Unsolvable error condition
+			print 'Missing Student from %s: %s (%s)' % (student.teacher, student.name, student.grade)
+			continue
+		student.laps1 = tableEntry.laps1
+		student.laps2 = tableEntry.laps2
+
+	missingStudents = sorted(missingStudents, key=lambda s: s.teacher)
+	missingClasses = itertools.groupby(missingStudents, key=lambda s: s.teacher)
+	availClasses = filter(lambda c: not c.used, classes)
+	
+	missingErrors = [missing_class_error % s[0] for s in missingClasses]
+	availErrors = [available_class_error % s.teacher.name for s in availClasses]
+	errors = []
+	errors += missingErrors
+	errors += availErrors
+
+	if errors:
+		return [], errors
+
+	errors = []
+
+	rows = [IDs.row_values(i) for i in xrange(1, IDs.nrows)]
 	def find_id(name):
-		rows = [IDs.row_values(i) for i in xrange(IDs.nrows)]
 		for row in rows:
 			if nameEquals(row[1], name):
 				return int(row[0])
@@ -41,9 +94,18 @@ def parseWorkbook(wb):
 	return classes, errors
 
 def nameEquals(a, b):
+	if 'Patin' in a:
+		print repr(a), repr(b)
 	partsA = filter(lambda n: len(n)>1, a.split())
 	partsB = filter(lambda n: len(n)>1, b.split())
-	return partsA == partsB
+	if len(partsA) == len(partsB):
+		return partsA == partsB
+	# make a shorter
+	if len(partsA) > len(partsB):
+		t = partsB
+		partsB = partsA
+		partsA = t
+	return all(a in partsB for a in partsA)
 
 def levenshteinDistance(s1,s2):
     if len(s1) > len(s2):
@@ -68,7 +130,6 @@ def sanitize(s):
 
 def parseSheet(sheet):
 	tables = findTables(sheet)
-	print sheet.name, tables
 	classes = [parseTable(sheet, t[0], t[1]) for t in tables]
 	return classes
 
@@ -108,7 +169,7 @@ def findTeacher(cl, sheet, c, r):
 	if row[c].value.strip() == '':
 		return findTeacher, r+1
 	else:
-		teacher = row[c].value.strip()
+		teacher = sanitize(row[c].value)
 		cl.teacher = Teacher(name=teacher)
 		return readStudents, r+1
 

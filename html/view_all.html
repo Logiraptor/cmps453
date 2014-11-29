@@ -4,10 +4,7 @@
 	</head>
 	<body>
 		{%if errors%}
-		Some students do not have an ID set in the IDs sheet. They are listed below. 
-		Some may just be typos, and in that case the closest match is listed to 
-		ease correcting the errors. Please re-upload the spreadsheet once the ids have been 
-		fixed or added. <br>
+		There were a few errors during the import process. Please make corrections to the spreadsheet and re-upload it.<br>
 		{%endif%}
 		{%for err in errors%}
 			{{err}} <br>

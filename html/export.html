@@ -1,0 +1,50 @@
+<html>
+	<head>
+		<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+	</head>
+	<body>
+		Export Page
+
+		
+
+		<select id="teacher_name">
+		</select>
+		<select id="student_name">
+		</select>
+
+	<script>
+		var teacherSelect = $("#teacher_name");
+		var studentSelect = $("#student_name");
+		$.ajax("/teacher_names", {
+			dataType: "json",
+			success: function(data) {
+				for (var i = data.length - 1; i >= 0; i--) {
+					var opt = $("<option></option>");
+					opt.attr('value', data[i]);
+					opt.text(data[i]);
+					teacherSelect.append(opt);
+				};
+			}
+		});
+
+		teacherSelect.change(function(event) {
+			$.ajax("/student_names", {
+				data: {
+					'teacher': teacherSelect.val(),
+				},
+				dataType: "json",
+				success: function(data) {
+					studentSelect.empty();
+					for (var i = data.length - 1; i >= 0; i--) {
+						var opt = $("<option></option>");
+						opt.attr('value', data[i].id);
+						opt.text(data[i].name);
+						studentSelect.append(opt);
+					};
+				}
+			});
+		});
+
+	</script>
+	</body>
+</html>

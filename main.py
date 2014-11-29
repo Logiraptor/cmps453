@@ -12,8 +12,7 @@ from datetime import date
 import logging
 
 import json
-from string import Template
-
+from models import Student
 from tmpl import BaseHandler
 
 cgitb.enable()
@@ -162,6 +161,7 @@ class AddMilestone(BaseHandler):
 
 # Handler that deletes a milestone from the datastore
 class DeleteMilestone(webapp2.RequestHandler):
+	@admin_required
 	def get(self):
 		try:
 			# get the city name of the milestone that they wish to delete
@@ -215,7 +215,7 @@ class ModifyMilestone(BaseHandler):
 			self.response.write(BACK_BUTTON)
 		
 class LapTrackerHandler(BaseHandler):
-	@login_required
+	@admin_required
 	def get(self):
 		self.render('html/tracker.html', {})
 
@@ -289,6 +289,17 @@ class CheckMilestones(webapp2.RequestHandler):
 
 		self.redirect('/')
 
+class TeacherNameHandler(webapp2.RequestHandler):
+	@admin_required
+	def get(self):
+		self.response.out.write(json.dumps(['Radle', 'Kumar']))
+
+class StudentNameHandler(webapp2.RequestHandler):
+	@admin_required
+	def get(self):
+		students = list(Student.query(Student.teacher==self.request.get('teacher')))
+		self.response.out.write(json.dumps([s.to_dict() for s in students]))
+
 # assigns a web address to a handler
 application = webapp2.WSGIApplication([
 	('/', MainPage),
@@ -301,4 +312,6 @@ application = webapp2.WSGIApplication([
 	('/deleteMilestone', DeleteMilestone),
 	('/modifyMilestone', ModifyMilestone),
 	('/checkMilestones', CheckMilestones),
+	('/teacher_names', TeacherNameHandler),
+	('/student_names', StudentNameHandler),
 ], debug=True)
