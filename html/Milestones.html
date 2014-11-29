@@ -1,0 +1,63 @@
+<!-- Milestone Page -->
+<html>
+
+<head>
+<style>
+table th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+th,td {
+  padding: 5px;
+  text-align: center;
+}
+
+table#t01 tr{
+  background-color:#eee;
+}
+
+table#t01 th {
+  background-color: black;
+  color: white;
+}
+</style
+</head>
+
+<body>
+
+{% if milestones %}
+<table id="t01" width=30%>
+  <tr>
+    <th>Goal</th>
+    <th>Progress</th>
+    <th>Options</th>
+  </tr>
+
+<!--Jinja loop reading in goal, progress, and location from server-->
+      {% for m in milestones %}
+        <tr>
+          <td>{{ m.city_name }}</td>
+          <td>{{ m.goalLaps }}</td>
+          <td>
+          <!-- Modify -->
+          <form action=''>
+	    <input type='hidden' name='milestone' value='{{ m }}'/>
+	    <input type='submit' value='Modify'/>
+          </form>
+	  <!-- Delete -->
+ 	  <form action=''>
+	    <input type='hidden' name='milestone' value='{{ m }}'/>
+	    <input type='submit' value='Delete'/>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </table>
+  {% endif %}
+  <br>
+  <a href="/addMilestone"><button>Add New Milestone</button></a><br>
+  <a href="/"<button>Back to Main Page</button></a>
+
+</body>
+</html>
