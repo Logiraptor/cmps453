@@ -12,9 +12,12 @@ class ImportHandler(tmpl.BaseHandler):
 		upload = self.request.get('file')
 		wb = open_workbook(file_contents=upload)
 		classes, errors = parseWorkbook(wb)
+
 		for c in classes:
+			c.teacher.put()
 			for s in c.students:
-				s.teacher = c.teacher.name
+				s.teacher = c.teacher.key
+
 		all_students = sum([c.students for c in classes], [])
 		ndb.put_multi(all_students)
 		self.render('html/view_all.html', {

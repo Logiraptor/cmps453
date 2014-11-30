@@ -6,5 +6,5 @@ cron:
   timezone: US/Central
 - description: daily milestone check
   url: /checkMilestones
-  schedule: every day at 16:00
+  schedule: every day 16:00
   timezone: US/Central

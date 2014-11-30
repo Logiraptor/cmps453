@@ -4,6 +4,8 @@ import itertools
 from models import Student, Teacher, Class
 
 grade_sheets = ['pk', 'k', '1st', '2nd', '3rd', '4th', '5th', '6th']
+grade_nums = [-1, 0, 1, 2, 3, 4, 5, 6]
+grades = zip(grade_nums, grade_sheets)
 typo_error = 'no id found for %s, but it may be a misspelling of %s (%.0f%% confidence)'
 missing_error = 'no id found for %s'
 
@@ -17,26 +19,34 @@ def parseWorkbook(wb):
 		Student objects. The result is a list of Class objects.
 	'''
 
-	sheets  = [wb.sheet_by_name(n) for n in grade_sheets]
-	classes = sum([parseSheet(s) for s in sheets], [])
+	sheets  = [wb.sheet_by_name(n[1]) for n in grades]
+	sheets  = zip(sheets, grade_sheets)
+	classes = []
+	for sheet, name in sheets:
+		clss = parseSheet(sheet)
+		for c in clss:
+			c.teacher.grade = name
+		classes += clss
 	IDs     = wb.sheet_by_name("IDs")
 
 	students = []
 	id_rows = (IDs.row(i) for i in xrange(1, IDs.nrows))
 	for row in id_rows:
-		students.append(Student(
+		s = Student(
+			studentID=int(row[0].value),
 			id=int(row[0].value),
 			name=sanitize(str(row[1].value)),
-			teacher=sanitize(str(row[2].value)).split()[0],
 			grade=sanitize(str(row[3].value)),
-		))
+		)
+		s.teacher_name = sanitize(str(row[2].value)).split()[0]
+		students.append(s)
 	print 'Found', len(students), 'Students'
 
 	missingStudents = []
 	for student in students:
 		clazz = None
 		for c in classes:
-			if nameEquals(c.teacher.name, student.teacher):
+			if nameEquals(c.teacher.name, student.teacher_name):
 				clazz = c
 				c.used = True
 				break
@@ -45,9 +55,11 @@ def parseWorkbook(wb):
 			continue
 
 		tableEntry = None
-		for s in clazz.students:
+		tableEntryI = None
+		for i, s in enumerate(clazz.students):
 			if nameEquals(s.name, student.name):
 				tableEntry = s
+				tableEntryI = i
 				break
 		if not tableEntry:
 			# Unsolvable error condition
@@ -55,9 +67,10 @@ def parseWorkbook(wb):
 			continue
 		student.laps1 = tableEntry.laps1
 		student.laps2 = tableEntry.laps2
+		clazz.students[tableEntryI] = student
 
-	missingStudents = sorted(missingStudents, key=lambda s: s.teacher)
-	missingClasses = itertools.groupby(missingStudents, key=lambda s: s.teacher)
+	missingStudents = sorted(missingStudents, key=lambda s: s.teacher_name)
+	missingClasses = itertools.groupby(missingStudents, key=lambda s: s.teacher_name)
 	availClasses = filter(lambda c: not c.used, classes)
 	
 	missingErrors = [missing_class_error % s[0] for s in missingClasses]
@@ -70,32 +83,12 @@ def parseWorkbook(wb):
 		return [], errors
 
 	errors = []
-
-	rows = [IDs.row_values(i) for i in xrange(1, IDs.nrows)]
-	def find_id(name):
-		for row in rows:
-			if nameEquals(row[1], name):
-				return int(row[0])
-		id = min([(float(levenshteinDistance(name, row[1])), row) for row in rows], key=lambda x: x[0])		
-		confidence = 10*(10-id[0])
-		if confidence >= 50:
-			errors.append((typo_error % (name, id[1][1], confidence), confidence))
-		else:
-			errors.append((missing_error % (name), 40))
-
-		return int(id[1][0])
-
-	for c in classes:
-		for s in c.students:
-			s.id = find_id(s.name)
-
-	errors = [x[0] for x in sorted(errors, key=lambda e: -e[1])]
 	
 	return classes, errors
 
 def nameEquals(a, b):
-	if 'Patin' in a:
-		print repr(a), repr(b)
+	# if 'Patin' in a:
+	# 	print repr(a), repr(b)
 	partsA = filter(lambda n: len(n)>1, a.split())
 	partsB = filter(lambda n: len(n)>1, b.split())
 	if len(partsA) == len(partsB):
@@ -170,7 +163,7 @@ def findTeacher(cl, sheet, c, r):
 		return findTeacher, r+1
 	else:
 		teacher = sanitize(row[c].value)
-		cl.teacher = Teacher(name=teacher)
+		cl.teacher = Teacher(id=teacher, name=teacher)
 		return readStudents, r+1
 
 def readStudents(cl, sheet, c, r):
