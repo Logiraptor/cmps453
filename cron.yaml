@@ -1,6 +1,10 @@
 # not sure what the target would be
 cron:
 - description: weekly milestone check
-  url: /crontask
+  url: /email
   schedule: every friday 15:00
+  timezone: US/Central
+- description: daily milestone check
+  url: /checkMilestones
+  schedule: every day at 16:00
   timezone: US/Central
