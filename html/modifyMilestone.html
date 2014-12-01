@@ -1,5 +1,5 @@
-<html>
-<body>
+{%extends 'html/base.html'%}
+{% block content %}
   <form action="/modifyMilestone" method="post">
     <input type="hidden" name="id" value="{{ milestone.city_name }}"/>
     Location: <input type="text" value="{{ milestone.city_name }}" name="city"/>
@@ -9,5 +9,4 @@
     <br>
     <input type="submit" value="Modify">
   </form>
-</body>
-</html>
+{% endblock %}

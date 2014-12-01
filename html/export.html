@@ -1,51 +1,47 @@
-<html>
-	<head>
-		<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
-	</head>
-	<body>
-		<h1>Export Page</h1>
-		<h2>Export All</h2>
-		<a href="/Laps.xlsx"><button>Export All</button></a>
-		<hr>
-		<h2>Export Single Student</h2>
-		<select id="teacher_name">
-		</select>
-		<select id="student_name">
-		</select>
+{% extends 'html/base.html' %}
+{% block content %}
+<h1>Export Page</h1>
+<h2>Export All</h2>
+<a href="/Laps.xlsx"><button>Export All</button></a>
+<hr>
+<h2>Export Single Student</h2>
+<select id="teacher_name">
+</select>
+<select id="student_name">
+</select>
+{%endblock%}
+{%block script%}
+<script>
+	var teacherSelect = $("#teacher_name");
+	var studentSelect = $("#student_name");
+	$.ajax("/teacher_names", {
+		dataType: "json",
+		success: function(data) {
+			for (var i = data.length - 1; i >= 0; i--) {
+				var opt = $("<option></option>");
+				opt.attr('value', data[i]);
+				opt.text(data[i]);
+				teacherSelect.append(opt);
+			};
+		}
+	});
 
-	<script>
-		var teacherSelect = $("#teacher_name");
-		var studentSelect = $("#student_name");
-		$.ajax("/teacher_names", {
+	teacherSelect.change(function(event) {
+		$.ajax("/student_names", {
+			data: {
+				'teacher': teacherSelect.val(),
+			},
 			dataType: "json",
 			success: function(data) {
+				studentSelect.empty();
 				for (var i = data.length - 1; i >= 0; i--) {
 					var opt = $("<option></option>");
-					opt.attr('value', data[i]);
-					opt.text(data[i]);
-					teacherSelect.append(opt);
+					opt.attr('value', data[i].id);
+					opt.text(data[i].name);
+					studentSelect.append(opt);
 				};
 			}
 		});
-
-		teacherSelect.change(function(event) {
-			$.ajax("/student_names", {
-				data: {
-					'teacher': teacherSelect.val(),
-				},
-				dataType: "json",
-				success: function(data) {
-					studentSelect.empty();
-					for (var i = data.length - 1; i >= 0; i--) {
-						var opt = $("<option></option>");
-						opt.attr('value', data[i].id);
-						opt.text(data[i].name);
-						studentSelect.append(opt);
-					};
-				}
-			});
-		});
-
-	</script>
-	</body>
-</html>
+	});
+</script>
+{%endblock%}

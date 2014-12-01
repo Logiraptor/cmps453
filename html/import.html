@@ -1,13 +1,7 @@
-<html>
-	<head>
-		<title>Import</title>
-	</head>
-	<body>
-		<form action="/import" method="POST" enctype="multipart/form-data">
-			<input type="file" name="file">
-			<input type="submit">
-		</form>
-	</body>
-</html>
-
-
+{% extends 'html/base.html' %}
+{% block content %}
+<form action="/import" method="POST" enctype="multipart/form-data">
+	<input type="file" name="file">
+	<input type="submit">
+</form>
+{% endblock %}
