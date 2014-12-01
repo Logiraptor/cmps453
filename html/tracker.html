@@ -64,8 +64,8 @@
 			$.ajax('/rollback', {
 				method: 'post',
 				data: {
-					'id': studentSelect.val(),
-					'track': track_field.val(),
+					'id': data.id,
+					'track': data.track,
 				},
 				dataType: 'json',
 				success: function(data) {
