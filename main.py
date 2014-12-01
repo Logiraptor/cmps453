@@ -29,12 +29,6 @@ BACK_BUTTON = """
 </html>
 """
 
-# TODO: ensure all urls are protected with admin_required
-class MainPage(BaseHandler):
-	@admin_required
-	def get(self):
-		self.render('html/index.html', {})
-
 # Handler that lists the milestones currently in the datastore
 class Milestones(BaseHandler):
 	@admin_required
@@ -127,6 +121,48 @@ class LapTrackerHandler(BaseHandler):
 	@admin_required
 	def get(self):
 		self.render('html/tracker.html', {})
+	def post(self):
+		student_id = self.request.get('id')
+		key = ndb.Key('Student', int(student_id))
+		student = key.get()
+		if not student:
+			self.response.out.write(json.dumps({
+				'error': 'invalid id',
+			}))
+			return
+		track = self.request.get('track')
+		if track == '1':
+			student.laps1 = student.laps1 + 1
+		else:
+			student.laps2 = student.laps2 + 1
+		student.put()
+		self.response.out.write(json.dumps({
+			'id': student.studentID,
+			'name': student.name,
+			'track': track
+		}))
+
+class RollbackHandler(BaseHandler):
+	def post(self):
+		student_id = self.request.get('id')
+		key = ndb.Key('Student', int(student_id))
+		student = key.get()
+		if not student:
+			self.response.out.write(json.dumps({
+				'error': 'invalid id',
+			}))
+			return
+		track = self.request.get('track')
+		if track == '1':
+			student.laps1 = student.laps1 - 1
+		else:
+			student.laps2 = student.laps2 - 1
+		student.put()
+		self.response.out.write(json.dumps({
+			'id': student.studentID,
+			'name': student.name,
+			'track': track
+		}))
 
 class TeacherNameHandler(webapp2.RequestHandler):
 	@admin_required
@@ -142,10 +178,11 @@ class StudentNameHandler(webapp2.RequestHandler):
 
 # assigns a web address to a handler
 application = webapp2.WSGIApplication([
-	('/', MainPage),
+	('/', LapTrackerHandler),
 	('/import', ImportHandler),
 	('/export', ExportHandler),
 	('/track', LapTrackerHandler),
+	('/rollback', RollbackHandler),
 	('/email', EmailHandler),
 	('/milestones', Milestones),
 	('/addMilestone', AddMilestone),

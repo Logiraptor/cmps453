@@ -1,7 +1,170 @@
 {% extends 'html/base.html' %}
-{% block content %}
-<form action="/track" method="POST">
-	Enter Student ID:
-	<input type="text" name="id">
-</form>
+
+{% block style %}
+	<style>
+	.log_row {
+		padding: 10px;
+	}
+	</style>
 {% endblock %}
+
+{% block content %}
+<div class="row">
+	<div class="col-md-6">
+		<form id="id_form" action="/track" method="POST">
+			<h1>Scan Student ID</h1>
+			<input id="id_field" class="form-control" type="text" name="id">
+			<input id="track_field" type="hidden" name="track" value="{{track}}">
+		</form>
+	</div>
+	<div class="col-md-6">
+		<h1>Manual Entry</h1>
+		<form class="form-horizontal" action="" id="manual_form">
+			<div class="form-group">
+				<label for="teacher_name" class="col-sm-2 control-label">Teacher:</label>
+				<div class="col-sm-10">
+					<select class="form-control" id="teacher_name" name="teacher_name">
+					</select>
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="student_name" class="col-sm-2 control-label">Student:</label>
+				<div class="col-sm-10">
+					<select class="form-control" id="student_name" name="student_name">
+					</select>
+				</div>
+			</div>
+			<input id="track_field" type="hidden" name="track" value="{{track}}">
+			<button class="btn btn-large">Submit</button>
+		</form>
+	</div>
+</div>
+<div class="row">
+	<div class="col-md-12">
+		<h1>Log</h1>
+		<div id="log"></div>
+	</div>
+</div>
+<div style="display:none">
+	<div class="log_row" id="log_row">
+		<span class="name_id"></span>
+		<button class="btn">Undo</button>
+	</div>
+</div>
+{% endblock %}
+
+{%block script%}
+<script>
+	var log = $("#log");
+	var row_tmpl = $("#log_row");
+	function addLog(data) {
+		var row = row_tmpl.clone();
+		row.find('.name_id').text(data.name);
+		row.find('.btn').click(function(event) {
+			$.ajax('/rollback', {
+				method: 'post',
+				data: {
+					'id': studentSelect.val(),
+					'track': track_field.val(),
+				},
+				dataType: 'json',
+				success: function(data) {
+					console.log(JSON.stringify(data));
+					row.remove();
+				},
+				error: function(message) {
+					console.log(message);
+				}
+			});
+		});
+		log.prepend(row);
+	}
+</script>
+<script>
+	var form = $("#id_form");
+	var id_field = $("#id_field");
+	var track_field = $("#track_field");
+	form.submit(function(event) {
+		event.preventDefault();
+		$.ajax('/track', {
+			method: 'POST',
+			dataType: 'json',
+			data: {
+				id: id_field.val(),
+				track: track_field.val(),
+			},
+			success: function(data) {
+				if (typeof data.error !== 'undefined') {
+					alert(data.error);
+					return;
+				}
+				console.log(JSON.stringify(data));
+				addLog(data);
+			},
+			error: function(message) {
+				console.log(message);
+			}
+		});
+		id_field.val('');
+	});
+
+	id_field.blur(function(event){
+		id_field.focus();
+	});
+	id_field.focus();
+</script>
+<script>
+	var teacherSelect = $("#teacher_name");
+	var studentSelect = $("#student_name");
+	var track_field = $("#track_field");
+	var manual_form = $("#manual_form");
+	$.ajax("/teacher_names", {
+		dataType: "json",
+		success: function(data) {
+			for (var i = data.length - 1; i >= 0; i--) {
+				var opt = $("<option></option>");
+				opt.attr('value', data[i]);
+				opt.text(data[i]);
+				teacherSelect.append(opt);
+			};
+		}
+	});
+
+	teacherSelect.change(function(event) {
+		$.ajax("/student_names", {
+			data: {
+				'teacher': teacherSelect.val(),
+			},
+			dataType: "json",
+			success: function(data) {
+				studentSelect.empty();
+				for (var i = data.length - 1; i >= 0; i--) {
+					var opt = $("<option></option>");
+					opt.attr('value', data[i].id);
+					opt.text(data[i].name);
+					studentSelect.append(opt);
+				};
+			}
+		});
+	});
+
+	manual_form.submit(function(event) {
+		event.preventDefault();
+		$.ajax('/track', {
+			method: 'post',
+			data: {
+				'id': studentSelect.val(),
+				'track': track_field.val(),
+			},
+			dataType: 'json',
+			success: function(data) {
+				console.log(JSON.stringify(data));
+				addLog(data);
+			},
+			error: function(message) {
+				console.log(message);
+			}
+		});
+	});
+</script>
+{%endblock%}
