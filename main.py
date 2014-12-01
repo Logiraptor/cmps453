@@ -6,7 +6,7 @@ from google.appengine.ext import ndb
 from webapp2_extras.appengine.users import login_required, admin_required
 from google.appengine.api import users
 import webapp2
-from import_export import ImportHandler, ExportHandler
+from import_export import ImportHandler, ExportHandler, ExportAllHandler
 from google.appengine.api import mail
 from datetime import date
 import logging
@@ -18,7 +18,7 @@ from string import Template
 
 from google.appengine.api import app_identity
 
-from cron import EmailHandler
+from cron import EmailHandler, CheckMilestones
 
 cgitb.enable()
 
@@ -128,76 +128,6 @@ class LapTrackerHandler(BaseHandler):
 	def get(self):
 		self.render('html/tracker.html', {})
 
-# Handler that will check if any teachers have met their current milestone mile target
-# This should only be called by a cron task
-class CheckMilestones(webapp2.RequestHandler):
-	# @login_required
-	def get(self):
-		# a list of teachers that have completed their milestone objective
-		teacherList = []
-
-		# get a list of all teachers
-		allTeachers = Teacher.query()
-
-		# iterate through all teachers
-		for teacher in allTeachers:
-			# get the current milestone for the teacher
-			if not teacher.currentMilestone:
-				currentMilestone = Milestone.query().order(Milestone.goalMiles).get()
-				teacher.currentMilestone = currentMilestone.key
-				teacher.put()
-			else:
-				currentMilestone = teacher.currentMilestone.get()
-			
-			# if the totalClassMiles of a teacher is >= its current milestone goal:
-			if teacher.totalClassMiles >= currentMilestone.goalMiles:
-				# add the teacher to the list
-				teacherList.append((teacher.name, currentMilestone.city_name))
-
-				# find the next milestone and assign it to the teacher
-				nextMilestone = Milestone.query(Milestone.goalMiles > int(teacher.totalClassMiles)).order(Milestone.goalMiles).get()
-
-				# check if there is a milestone
-				if nextMilestone:
-					teacher.currentMilestone = nextMilestone.key
-					teacher.put()
-
-		# if the teacherList is not empty
-		if teacherList:
-			# create an email to send to the teacher with the names of the teacher
-			rowTemplate = Template("""
-				<tr>
-					<td>$teacher</td>
-					<td>$milestone</td>
-				</tr>
-			""")
-
-
-			body = """
-			<html><body>
-				<center><h2>Milestone Reached!</h2></center>
-				The following teachers have reached their milestones:<br>
-				<table width='30%' border='1'>
-					<tr>
-						<th>Teacher Name</th>
-						<th>Milestone</th>
-					</tr>
-			"""
-
-			# for every teacher name that has passed their milestone
-			for t, m in teacherList:
-				body = body + rowTemplate.substitute(teacher=t, milestone=m)
-
-			body = body + """
-				</table>
-			</body></html>
-			"""
-
-			subject = 'A Milestone Has Been Reached! ' + str(date.today())
-			app_id = app_identity.get_application_id()
-			print body
-			mail.send_mail_to_admins("support@"+app_id+".appspotmail.com", subject, body)
-
 class TeacherNameHandler(webapp2.RequestHandler):
 	@admin_required
 	def get(self):
@@ -206,8 +136,9 @@ class TeacherNameHandler(webapp2.RequestHandler):
 class StudentNameHandler(webapp2.RequestHandler):
 	@admin_required
 	def get(self):
-		students = list(Student.query(Student.teacher==self.request.get('teacher')))
-		self.response.out.write(json.dumps([s.to_dict() for s in students]))
+		key = ndb.Key('Teacher', self.request.get('teacher'))
+		students = list(Student.query(Student.teacher==key))
+		self.response.out.write(json.dumps([{'id':s.studentID, 'name':s.name} for s in students]))
 
 # assigns a web address to a handler
 application = webapp2.WSGIApplication([
@@ -223,4 +154,5 @@ application = webapp2.WSGIApplication([
 	('/checkMilestones', CheckMilestones),
 	('/teacher_names', TeacherNameHandler),
 	('/student_names', StudentNameHandler),
+	('/Laps.xlsx', ExportAllHandler),
 ], debug=True)
