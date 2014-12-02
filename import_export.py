@@ -36,6 +36,17 @@ class ExportHandler(tmpl.BaseHandler):
 		self.response.write('<html><body>Export data to be handled here')
 		self.response.write(BACK_BUTTON)
 
+class ExportSingleHandler(tmpl.BaseHandler):
+	def get(self):
+		student_id = self.request.get('id')
+		key = ndb.Key('Student', int(student_id))
+		student = key.get()
+		data = student.to_dict()
+		data.update({
+			'_teacher': student.teacher.get(),
+		})
+		self.render('html/view_single.html', data)
+
 class ExportAllHandler(tmpl.BaseHandler):
 	def get(self):
 		students = list(Student.query())

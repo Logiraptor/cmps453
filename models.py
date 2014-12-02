@@ -3,11 +3,10 @@ from google.appengine.ext import ndb
 import json
 
 
-# TODO: merge theses with models.py
 # Database Model: Milestone Data
 class Milestone(ndb.Model):
 	city_name = ndb.StringProperty()
-	goalMiles = ndb.IntegerProperty()
+	goalMiles = ndb.FloatProperty()
 
 # Database Model: Teacher Data
 class Teacher(ndb.Model):

@@ -6,7 +6,7 @@ from google.appengine.ext import ndb
 from webapp2_extras.appengine.users import login_required, admin_required
 from google.appengine.api import users
 import webapp2
-from import_export import ImportHandler, ExportHandler, ExportAllHandler
+from import_export import ImportHandler, ExportHandler, ExportAllHandler, ExportSingleHandler
 from google.appengine.api import mail
 from datetime import date
 import logging
@@ -34,7 +34,7 @@ class Milestones(BaseHandler):
 	@admin_required
 	def get(self):
 		# get all milestones
-		milestones = Milestone.query()
+		milestones = Milestone.query().order(Milestone.goalMiles)
 
 		# render milestones.html with all milestones
 		self.render('html/milestones.html', {
@@ -55,7 +55,7 @@ class AddMilestone(BaseHandler):
 
 			# if the user has input something for BOTH fields
 			if city and miles:
-				newMilestone = Milestone(id = city, city_name = city, goalMiles = int(miles))
+				newMilestone = Milestone(id = city, city_name = city, goalMiles = float(miles))
 				newMilestone.put()
 
 			self.redirect('/milestones')
@@ -107,7 +107,7 @@ class ModifyMilestone(BaseHandler):
 
 			# update the milestone and add changes to datastore
 			chosen_milestone.city_name = newCity
-			chosen_milestone.goalMiles = int(newMiles)
+			chosen_milestone.goalMiles = float(newMiles)
 			chosen_milestone.put()
 
 			self.redirect('/milestones')
@@ -181,6 +181,7 @@ application = webapp2.WSGIApplication([
 	('/', LapTrackerHandler),
 	('/import', ImportHandler),
 	('/export', ExportHandler),
+	('/export_single', ExportSingleHandler),
 	('/track', LapTrackerHandler),
 	('/rollback', RollbackHandler),
 	('/email', EmailHandler),

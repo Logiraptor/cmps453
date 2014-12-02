@@ -1,7 +1,9 @@
 {% extends 'html/base.html' %}
 {% block content %}
+<h1>Import Data</h1>
+Upload a spreadsheet containing lap data. <br>
 <form action="/import" method="POST" enctype="multipart/form-data">
-	<input type="file" name="file">
-	<input type="submit">
+	<input class="form-control" type="file" name="file"> <br>
+	<button class="btn btn-primary btn-large">Upload</button>
 </form>
 {% endblock %}

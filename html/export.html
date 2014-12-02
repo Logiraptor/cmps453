@@ -12,7 +12,7 @@
 		<form action="/export_single">
 			<select class="form-control" id="teacher_name">
 			</select>
-			<select class="form-control" id="student_name">
+			<select class="form-control" id="student_name" name="id">
 			</select>
 			<button class="btn btn-large">Export</button>
 		</form>
@@ -32,6 +32,7 @@
 				opt.text(data[i]);
 				teacherSelect.append(opt);
 			};
+			teacherSelect.change();
 		}
 	});
 

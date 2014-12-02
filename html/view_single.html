@@ -1,0 +1,26 @@
+{%extends 'html/base.html'%}
+{%block content%}
+<h1>Export Student</h1>
+<table class="table">
+	<thead>
+		<tr>
+			<td>Name</td>
+			<td>Grade</td>
+			<td>Teacher</td>
+			<td>Track 1 Laps</td>
+			<td>Track 2 Laps</td>
+			<td>Total Miles</td>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>{{name}}</td>
+			<td>{{grade}}</td>
+			<td>{{_teacher.name}}</td>
+			<td>{{laps1}}</td>
+			<td>{{laps2}}</td>
+			<td>{{total_miles}}</td>
+		</tr>
+	</tbody>
+</table>
+{%endblock%}
