@@ -12,7 +12,6 @@ class Milestone(ndb.Model):
 class Teacher(ndb.Model):
 	name = ndb.StringProperty()
 	currentMilestone = ndb.KeyProperty(Milestone)
-	grade = ndb.StringProperty()
 	totalClassMiles = ndb.ComputedProperty(lambda self: sum([s.total_miles for s in Student.query(Student.teacher == self.key)]))
 
 # Data structure: Student Data

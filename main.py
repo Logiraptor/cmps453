@@ -6,7 +6,7 @@ from google.appengine.ext import ndb
 from webapp2_extras.appengine.users import login_required, admin_required
 from google.appengine.api import users
 import webapp2
-from import_export import ImportHandler, ExportHandler, ExportAllHandler, ExportSingleHandler
+from import_export import ImportHandler, ExportHandler, ExportAllHandler, ExportSingleHandler, ImportIDsHandler
 from google.appengine.api import mail
 from datetime import date
 import logging
@@ -205,6 +205,7 @@ class ResetHandler(webapp2.RequestHandler):
 application = webapp2.WSGIApplication([
 	('/', LapTrackerHandler),
 	('/import', ImportHandler),
+	('/import_ids', ImportIDsHandler),
 	('/export', ExportHandler),
 	('/export_single', ExportSingleHandler),
 	('/track', LapTrackerHandler),

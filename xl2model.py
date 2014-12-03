@@ -6,6 +6,7 @@ from models import Student, Teacher, Class
 grade_sheets = ['pk', 'k', '1st', '2nd', '3rd', '4th', '5th', '6th', 'Misc']
 grade_nums = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 grades = zip(grade_nums, grade_sheets)
+grade_dict = dict(grades)
 typo_error = 'no id found for %s, but it may be a misspelling of %s (%.0f%% confidence)'
 missing_error = '%s appears in the IDs sheet, but not in %s\'s class'
 missing_id_error = '%s appears in %s\'s class, but not in the IDs sheet'

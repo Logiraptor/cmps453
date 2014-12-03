@@ -5,9 +5,45 @@ import tmpl
 import json
 from google.appengine.ext import ndb
 import xlwt
-from models import Student
-from xl2model import grades
+from models import Student, Teacher
+from xl2model import grades, sanitize, grade_dict
 import itertools
+
+class ImportIDsHandler(tmpl.BaseHandler):
+	def post(self):
+		upload = self.request.get('file')
+		wb = open_workbook(file_contents=upload)
+		IDs = wb.sheet_by_name("IDs")
+		nrows = IDs.nrows
+		students = []
+		teachers = {}
+		for i in xrange(1, nrows):
+			row = IDs.row_values(i)
+			# id name teacher grade
+			s = Student(
+				id=int(row[0]),
+				studentID=int(row[0]),
+				name=sanitize(row[1]),
+				grade=sanitize(row[3]),
+				cementLaps=0,
+				grassLaps=0,
+			)
+			s.teacher_name = sanitize(row[2])
+			students.append(s)
+
+		for s in students:
+			if s.teacher_name in teachers:
+				s.teacher = teachers[s.teacher_name]
+			else:
+				t = Teacher(
+					id=s.teacher_name, 
+					name=s.teacher_name,
+				)
+				t.put()
+				teachers[s.teacher_name] = t.key
+				s.teacher = t.key
+
+		ndb.put_multi(students)
 
 class ImportHandler(tmpl.BaseHandler):
 	def get(self):
@@ -57,23 +93,31 @@ def exportAll(stream):
 	for s in students:
 		s._teacher = s.teacher.get()
 
-	print len(students)
-
 	wb = xlwt.Workbook()
 
+	# Group students by teacher name
+	students = sorted(students, key=lambda s: s._teacher.name)
+	classes_by_teacher = itertools.groupby(students, key=lambda s: s._teacher.name)
+	classes_by_teacher = map(lambda x: (x[0], list(x[1])), classes_by_teacher)
 
-	# Construct Each Grade Sheet
-	for num, name in grades:
-		sheet = wb.add_sheet(name)
-		grade_students = filter(lambda x: int(float(x.grade)) == num, students)
-		print len(students)
-		grade_students = sorted(grade_students, key=lambda s: s._teacher.name)
-		print len(students)
-		students_by_teacher = itertools.groupby(grade_students, key=lambda s: s._teacher.name)
-		print len(students)
+	# Determines which sheet a class belongs in
+	def determine_sheet(c):
+		select_grade = lambda s: s.grade
+		grades = list(set(map(select_grade, c[1])))
+		if len(grades) == 1:
+			return grade_dict[int(float(grades[0]))]
+		return 'Misc'
+
+	# Sort by sheet
+	sheets_per_class = sorted(classes_by_teacher, key=determine_sheet)
+	sheets_by_class = itertools.groupby(sheets_per_class, key=determine_sheet)
+
+	for sheet, clazz in sheets_by_class:
+
+		sheet = wb.add_sheet(sheet)
 
 		row = 0
-		for teacher, teacher_students in students_by_teacher:
+		for teacher, teacher_students in clazz:
 			printClassHeader(sheet, row, teacher)
 			row += 2
 			start_row = row + 1
@@ -91,7 +135,9 @@ def exportAll(stream):
 			sheet.write(row, 3, xlwt.Formula('SUM(D%d:D%d)'%(start_row, row)))
 			sheet.write(row, 4, xlwt.Formula('QUOTIENT(D%d,10.5)' % (row+1)))
 			sheet.write(row, 5, xlwt.Formula('SUM(C%d,E%d)'%(row+1,row+1)))
-			row += 1
+			row += 2
+
+
 
 	# Construct IDs sheet
 	IDs = wb.add_sheet('IDs')
