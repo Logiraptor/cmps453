@@ -91,6 +91,7 @@ def exportAll(stream):
 			sheet.write(row, 3, xlwt.Formula('SUM(D%d:D%d)'%(start_row, row)))
 			sheet.write(row, 4, xlwt.Formula('QUOTIENT(D%d,10.5)' % (row+1)))
 			sheet.write(row, 5, xlwt.Formula('SUM(C%d,E%d)'%(row+1,row+1)))
+			row += 1
 
 	# Construct IDs sheet
 	IDs = wb.add_sheet('IDs')

@@ -3,11 +3,12 @@ import collections
 import itertools
 from models import Student, Teacher, Class
 
-grade_sheets = ['pk', 'k', '1st', '2nd', '3rd', '4th', '5th', '6th']
-grade_nums = [-1, 0, 1, 2, 3, 4, 5, 6]
+grade_sheets = ['pk', 'k', '1st', '2nd', '3rd', '4th', '5th', '6th', 'Misc']
+grade_nums = [-1, 0, 1, 2, 3, 4, 5, 6, 7]
 grades = zip(grade_nums, grade_sheets)
 typo_error = 'no id found for %s, but it may be a misspelling of %s (%.0f%% confidence)'
-missing_error = 'no id found for %s'
+missing_error = '%s appears in the IDs sheet, but not in %s\'s class'
+missing_id_error = '%s appears in %s\'s class, but not in the IDs sheet'
 
 missing_class_error = '%s only appears in the IDs sheet.'
 available_class_error = '%s does not appear in the IDs sheet.'
@@ -16,10 +17,18 @@ def parseWorkbook(wb):
 	'''
 		parseWorkbook accepts an xlrd.Workbook object
 		and parses all the contained students into 
-		Student objects. The result is a list of Class objects.
+		Student objects. The result is a list of Class objects 
+		and a list of error strings.
 	'''
 
-	sheets  = [wb.sheet_by_name(n[1]) for n in grades]
+	errors = []
+	sheets = []
+	for n in grades:
+		try:
+			sheets.append(wb.sheet_by_name(n[1]))
+		except xlrd.XLRDError, e:
+			errors.append('Missing Sheet "%s"' % n[1])
+
 	sheets  = zip(sheets, grade_sheets)
 	classes = []
 	for sheet, name in sheets:
@@ -43,16 +52,21 @@ def parseWorkbook(wb):
 	print 'Found', len(students), 'Students'
 
 	missingStudents = []
+	missingTableEntries = []
 	for student in students:
 		clazz = None
+		# print '-----'
 		for c in classes:
+			# print repr(c.teacher.name)
 			if nameEquals(c.teacher.name, student.teacher_name):
 				clazz = c
 				c.used = True
 				break
 		if not clazz:
+			# print 'missing', repr(student.teacher_name)
 			missingStudents.append(student)
 			continue
+		# print '-----'
 
 		tableEntry = None
 		tableEntryI = None
@@ -63,7 +77,7 @@ def parseWorkbook(wb):
 				break
 		if not tableEntry:
 			# Unsolvable error condition
-			print 'Missing Student from %s: %s (%s)' % (student.teacher, student.name, student.grade)
+			missingTableEntries.append(student)
 			continue
 		student.cementLaps = tableEntry.cementLaps
 		student.grassLaps = tableEntry.grassLaps
@@ -72,12 +86,22 @@ def parseWorkbook(wb):
 	missingStudents = sorted(missingStudents, key=lambda s: s.teacher_name)
 	missingClasses = itertools.groupby(missingStudents, key=lambda s: s.teacher_name)
 	availClasses = filter(lambda c: not c.used, classes)
+
+	missingIDs = []
+	for c in classes:
+		for s in c.students:
+			if not s.studentID:
+				s.teacher_name = c.teacher.name
+				missingIDs.append(s)
 	
 	missingErrors = [missing_class_error % s[0] for s in missingClasses]
 	availErrors = [available_class_error % s.teacher.name for s in availClasses]
-	errors = []
 	errors += missingErrors
 	errors += availErrors
+	errors += [missing_id_error % (s.name, s.teacher_name) for s in missingIDs]
+	errors += [missing_error % (s.name, s.teacher_name) for s in missingTableEntries]
+
+	errors = sorted(errors)
 
 	if errors:
 		return [], errors
@@ -171,14 +195,14 @@ def readStudents(cl, sheet, c, r):
 	if not isinstance(row[c].value, collections.Iterable):
 		return None, r
 	if 'Total' in row[c].value:
-		return startState, r+1
+		return None, r
 
 	if type(row[c+1].value) != float:
 		laps = 0.0
 	else:
 		laps = row[c+1].value
 
-	if sheet.number < 5:
+	if len(row) - c < 6:
 		cementLaps = 0.0 
 	elif type(row[c+3].value) != float:
 		cementLaps = 0.0
