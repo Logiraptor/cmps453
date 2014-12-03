@@ -120,7 +120,16 @@ class ModifyMilestone(BaseHandler):
 class LapTrackerHandler(BaseHandler):
 	@admin_required
 	def get(self):
-		self.render('html/tracker.html', {})
+		track = self.request.get('track')
+		data = {
+			'track': track,
+			'cement': track == '1',
+			'grass': track == '2',
+		}
+		if track:
+			self.render('html/tracker.html', data)
+		else:
+			self.render('html/which_track.html', data)
 	def post(self):
 		student_id = self.request.get('id')
 		key = ndb.Key('Student', int(student_id))
@@ -132,9 +141,10 @@ class LapTrackerHandler(BaseHandler):
 			return
 		track = self.request.get('track')
 		if track == '1':
-			student.laps1 = student.laps1 + 1
+			student.cementLaps = student.cementLaps + 1
 		else:
-			student.laps2 = student.laps2 + 1
+			print track
+			student.grassLaps = student.grassLaps + 1
 		student.put()
 		self.response.out.write(json.dumps({
 			'id': student.studentID,
@@ -154,9 +164,9 @@ class RollbackHandler(BaseHandler):
 			return
 		track = self.request.get('track')
 		if track == '1':
-			student.laps1 = student.laps1 - 1
+			student.cementLaps = student.cementLaps - 1
 		else:
-			student.laps2 = student.laps2 - 1
+			student.grassLaps = student.grassLaps - 1
 		student.put()
 		self.response.out.write(json.dumps({
 			'id': student.studentID,
@@ -176,6 +186,21 @@ class StudentNameHandler(webapp2.RequestHandler):
 		students = list(Student.query(Student.teacher==key))
 		self.response.out.write(json.dumps([{'id':s.studentID, 'name':s.name} for s in students]))
 
+class ResetHandler(webapp2.RequestHandler):
+	@admin_required
+	def get(self):
+		qo = ndb.QueryOptions(keys_only=True)
+		query = Student.query()
+		ndb.delete_multi(query.fetch(1000, options=qo))
+
+		query = Teacher.query()
+		for t in query:
+			t.currentMilestone = None
+			t.put()
+
+		self.redirect('/milestones')
+
+
 # assigns a web address to a handler
 application = webapp2.WSGIApplication([
 	('/', LapTrackerHandler),
@@ -192,5 +217,6 @@ application = webapp2.WSGIApplication([
 	('/checkMilestones', CheckMilestones),
 	('/teacher_names', TeacherNameHandler),
 	('/student_names', StudentNameHandler),
+	('/reset', ResetHandler),
 	('/Laps.xlsx', ExportAllHandler),
 ], debug=True)

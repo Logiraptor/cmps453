@@ -21,9 +21,9 @@ class Student(ndb.Model):
 	name = ndb.StringProperty(indexed=True)
 	teacher = ndb.KeyProperty(Teacher)
 	grade = ndb.StringProperty()
-	laps1 = ndb.FloatProperty()
-	laps2 = ndb.FloatProperty()
-	total_miles = ndb.ComputedProperty(lambda self: self.laps1*0.1+self.laps2*0.25)
+	cementLaps = ndb.FloatProperty()
+	grassLaps = ndb.FloatProperty()
+	total_miles = ndb.ComputedProperty(lambda self: self.cementLaps / 10.5 + self.grassLaps / 4.0)
 
 class Class(object):
 	def __init__(self):

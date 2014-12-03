@@ -65,8 +65,8 @@ def parseWorkbook(wb):
 			# Unsolvable error condition
 			print 'Missing Student from %s: %s (%s)' % (student.teacher, student.name, student.grade)
 			continue
-		student.laps1 = tableEntry.laps1
-		student.laps2 = tableEntry.laps2
+		student.cementLaps = tableEntry.cementLaps
+		student.grassLaps = tableEntry.grassLaps
 		clazz.students[tableEntryI] = student
 
 	missingStudents = sorted(missingStudents, key=lambda s: s.teacher_name)
@@ -187,8 +187,8 @@ def readStudents(cl, sheet, c, r):
 
 	cl.students.append(Student(
 			name=row[c].value,
-			laps1=laps,
-			laps2=cementLaps,
+			cementLaps=laps,
+			grassLaps=cementLaps,
 		))
 	return readStudents, r+1
 

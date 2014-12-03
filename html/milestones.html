@@ -27,6 +27,7 @@
 
 {% block content %}
 {% if milestones %}
+<h1>Edit Milestones</h1>
 <table id="t01" width=30%>
   <tr>
     <th>Goal</th>
@@ -55,5 +56,24 @@
 </table>
 {% endif %}
 <br>
-<a href="/addMilestone"><button>Add New Milestone</button></a><br>
+<a href="/addMilestone"><button class="btn btn-primary btn-large">Add New Milestone</button></a><br>
+<h1>Reset System</h1>
+Pressing the button below will clear all teacher student data from the system and clear each teacher's milestone progress. 
+<br>
+<button id="reset" class="btn btn-danger btn-large">Reset All Data</button>
+{%endblock%}
+
+{%block script%}
+<script>
+  var resetButton = $("#reset");
+  resetButton.click(function(event) {
+    var reset = confirm("This will permanently delete all student data and milestone progress.");
+    if (!reset) {
+      return;
+    }
+
+    // Do reset
+    window.location.href = '/reset';
+  });
+</script>
 {%endblock%}

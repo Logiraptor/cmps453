@@ -9,6 +9,7 @@
 {% endblock %}
 
 {% block content %}
+<h1>{%if grass %}Grass Track{%endif%}{%if cement %}Cement Track{%endif%}</h1>
 <div class="row">
 	<div class="col-md-6">
 		<form id="id_form" action="/track" method="POST">
