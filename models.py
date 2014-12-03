@@ -16,12 +16,12 @@ class Teacher(ndb.Model):
 
 # Data structure: Student Data
 class Student(ndb.Model):
-	studentID = ndb.IntegerProperty()
+	studentID = ndb.IntegerProperty(indexed=False)
 	name = ndb.StringProperty(indexed=True)
 	teacher = ndb.KeyProperty(Teacher)
 	grade = ndb.StringProperty()
-	cementLaps = ndb.FloatProperty()
-	grassLaps = ndb.FloatProperty()
+	cementLaps = ndb.FloatProperty(indexed=False)
+	grassLaps = ndb.FloatProperty(indexed=False)
 	total_miles = ndb.ComputedProperty(lambda self: self.cementLaps / 10.5 + self.grassLaps / 4.0)
 
 class Class(object):
