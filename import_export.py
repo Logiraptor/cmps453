@@ -5,7 +5,7 @@ import tmpl
 import json
 from google.appengine.ext import ndb
 import xlwt
-from models import Student, Teacher
+from models import Student, Teacher, Class
 from xl2model import grades, sanitize, grade_dict
 import itertools
 
@@ -33,17 +33,29 @@ class ImportIDsHandler(tmpl.BaseHandler):
 
 		for s in students:
 			if s.teacher_name in teachers:
-				s.teacher = teachers[s.teacher_name]
+				s.teacher = teachers[s.teacher_name].key
 			else:
 				t = Teacher(
 					id=s.teacher_name, 
 					name=s.teacher_name,
 				)
 				t.put()
-				teachers[s.teacher_name] = t.key
+				teachers[s.teacher_name] = t
 				s.teacher = t.key
 
 		ndb.put_multi(students)
+
+		classes = []
+		for teacher_name, teacher in teachers.items():
+			c = Class()
+			c.teacher = teacher
+			c.students = filter(lambda s: s.teacher_name == teacher_name, students)
+			classes.append(c)
+		self.render('html/view_all.html', {
+			'errors':[],
+			'classes': classes,
+		})
+
 
 class ImportHandler(tmpl.BaseHandler):
 	def get(self):

@@ -177,14 +177,18 @@ class RollbackHandler(BaseHandler):
 class TeacherNameHandler(webapp2.RequestHandler):
 	@admin_required
 	def get(self):
-		self.response.out.write(json.dumps([t.name for t in Teacher.query()]))
+		data = [t.name for t in Teacher.query()]
+		data = sorted(data, reverse=True)
+		self.response.out.write(json.dumps(data))
 
 class StudentNameHandler(webapp2.RequestHandler):
 	@admin_required
 	def get(self):
 		key = ndb.Key('Teacher', self.request.get('teacher'))
 		students = list(Student.query(Student.teacher==key))
-		self.response.out.write(json.dumps([{'id':s.studentID, 'name':s.name} for s in students]))
+		data = [{'id':s.studentID, 'name':s.name} for s in students]
+		data = sorted(data, key=lambda x: x['name'], reverse=True)
+		self.response.out.write(json.dumps(data))
 
 class ResetHandler(webapp2.RequestHandler):
 	@admin_required
