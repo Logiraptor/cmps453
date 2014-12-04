@@ -12,7 +12,7 @@ from datetime import date
 import logging
 
 import json
-from models import Student, Teacher, Milestone
+from models import Student, Teacher, Milestone, Class
 from tmpl import BaseHandler
 from string import Template
 
@@ -204,6 +204,26 @@ class ResetHandler(webapp2.RequestHandler):
 
 		self.redirect('/milestones')
 
+class ViewAllHandler(BaseHandler):
+	def get(self):
+		students = list(Student.query())
+		for s in students:
+			s._teacher = s.teacher.get()
+			s.teacher_name = s._teacher.name
+
+		teachers = {s._teacher.name:s._teacher for s in students}
+
+		classes = []
+		for teacher_name, teacher in teachers.items():
+			c = Class()
+			c.teacher = teacher
+			c.students = filter(lambda s: s.teacher_name == teacher_name, students)
+			classes.append(c)
+		self.render('html/view_all.html', {
+			'errors':[],
+			'classes': classes,
+		})
+
 
 # assigns a web address to a handler
 application = webapp2.WSGIApplication([
@@ -224,4 +244,5 @@ application = webapp2.WSGIApplication([
 	('/student_names', StudentNameHandler),
 	('/reset', ResetHandler),
 	('/Laps.xls', ExportAllHandler),
+	('/view_all', ViewAllHandler),
 ], debug=True)
