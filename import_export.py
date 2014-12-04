@@ -24,7 +24,7 @@ class ImportIDsHandler(tmpl.BaseHandler):
 				id=int(row[0]),
 				studentID=int(row[0]),
 				name=sanitize(row[1]),
-				grade=sanitize(row[3]),
+				grade=str(sanitize(row[3])),
 				cementLaps=0,
 				grassLaps=0,
 			)

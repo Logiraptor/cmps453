@@ -223,5 +223,5 @@ application = webapp2.WSGIApplication([
 	('/teacher_names', TeacherNameHandler),
 	('/student_names', StudentNameHandler),
 	('/reset', ResetHandler),
-	('/Laps.xlsx', ExportAllHandler),
+	('/Laps.xls', ExportAllHandler),
 ], debug=True)
