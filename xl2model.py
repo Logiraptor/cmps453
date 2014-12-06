@@ -212,8 +212,8 @@ def readStudents(cl, sheet, c, r):
 
 	cl.students.append(Student(
 			name=row[c].value,
-			cementLaps=laps,
-			grassLaps=cementLaps,
+			cementLaps=cementLaps,
+			grassLaps=laps,
 		))
 	return readStudents, r+1
 
