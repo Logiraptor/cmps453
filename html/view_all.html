@@ -28,6 +28,13 @@
 					<td>{{s.total_miles}}</td>
 				</tr>
 				{%endfor%}
+				<tr>
+					<td>Class Total</td>
+					<td></td>
+					<td>{{class.teacher.totalCement()}}</td>
+					<td>{{class.teacher.totalGrass()}}</td>
+					<td>{{class.teacher.totalClassMiles}}</td>
+				</tr>
 			</tbody>
 		</table>
 	{%endfor%}

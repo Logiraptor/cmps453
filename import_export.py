@@ -43,6 +43,13 @@ class ImportIDsHandler(tmpl.BaseHandler):
 				teachers[s.teacher_name] = t
 				s.teacher = t.key
 
+		student_keys = [s.key for s in students]
+		old_students = ndb.get_multi(student_keys)
+		for ns, os in zip(students, old_students):
+			if os:
+				ns.grassLaps += os.grassLaps
+				ns.cementLaps += os.cementLaps
+
 		ndb.put_multi(students)
 
 		classes = []
@@ -70,8 +77,15 @@ class ImportHandler(tmpl.BaseHandler):
 			for s in c.students:
 				s.teacher = c.teacher.key
 
-		all_students = sum([c.students for c in classes], [])
-		ndb.put_multi(all_students)
+		students = sum([c.students for c in classes], [])
+		student_keys = [s.key for s in students]
+		old_students = ndb.get_multi(student_keys)
+		for ns, os in zip(students, old_students):
+			if os:
+				ns.grassLaps += os.grassLaps
+				ns.cementLaps += os.cementLaps
+
+		ndb.put_multi(students)
 		self.render('html/view_all.html', {
 			'classes': classes,
 			'errors': errors,
@@ -135,9 +149,9 @@ def exportAll(stream):
 			start_row = row + 1
 			for student in teacher_students:
 				sheet.write(row, 0, student.name)
-				sheet.write(row, 1, student.cementLaps)
+				sheet.write(row, 1, student.grassLaps)
 				sheet.write(row, 2, xlwt.Formula('QUOTIENT(B%d,4)' % (row+1)))
-				sheet.write(row, 3, student.grassLaps)
+				sheet.write(row, 3, student.cementLaps)
 				sheet.write(row, 4, xlwt.Formula('QUOTIENT(D%d,10.5)' % (row+1)))
 				sheet.write(row, 5, xlwt.Formula('SUM(C%d,E%d)'%(row+1,row+1)))
 				row += 1
