@@ -66,7 +66,7 @@ class EmailHandler(webapp2.RequestHandler):
 
             # set the body as the email message html and send
             app_id = app_identity.get_application_id()
-            mail.send_mail_to_admins("support@"+app_id+".appspotmail.com", subject, body)
+            mail.send_mail_to_admins("support@"+app_id+".appspotmail.com", subject, body, html=body)
 
         except Exception as message:
             # Log the error.
@@ -142,4 +142,4 @@ class CheckMilestones(webapp2.RequestHandler):
 
             subject = 'A Milestone Has Been Reached! ' + str(date.today())
             app_id = app_identity.get_application_id()
-            mail.send_mail_to_admins("support@"+app_id+".appspotmail.com", subject, body)
+            mail.send_mail_to_admins("support@"+app_id+".appspotmail.com", subject, body, html=body)
